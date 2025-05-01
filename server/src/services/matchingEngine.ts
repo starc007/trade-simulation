@@ -68,8 +68,8 @@ export class MatchingEngine {
         trade_id: uuidv4(),
         timestamp: Date.now(),
         pair,
-        price: topOrder.limit_price, // Maker sets the price
-        amount: tradeAmount.toString(),
+        price: topOrder.limit_price,
+        amount: tradeAmount.toFixed(1),
         maker_order_id: topOrder.order_id,
         taker_order_id: order_id,
         maker_account_id: topOrder.account_id,
@@ -87,7 +87,7 @@ export class MatchingEngine {
       if (newTopOrderAmount.isZero()) {
         opposingOrders.shift(); // Remove fully filled order
       } else {
-        topOrder.amount = newTopOrderAmount.toString();
+        topOrder.amount = newTopOrderAmount.toFixed(1);
       }
     }
 
@@ -95,7 +95,7 @@ export class MatchingEngine {
     if (remainingAmount.gt(0)) {
       const remainingOrder: Order = {
         ...incomingOrder,
-        amount: remainingAmount.toString(),
+        amount: remainingAmount.toFixed(1),
       };
       this.orderBook.addOrder(remainingOrder);
     }

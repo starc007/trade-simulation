@@ -1,5 +1,5 @@
-import { Order } from "@/types/trading";
-import { MatchingEngine } from "@/services/matchingEngine";
+import { Order } from "../types/trading";
+import { MatchingEngine } from "../services/matchingEngine";
 
 describe("MatchingEngine", () => {
   let engine: MatchingEngine;

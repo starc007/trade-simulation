@@ -7,8 +7,6 @@ module.exports = {
     "^.+\\.tsx?$": "ts-jest",
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
-  collectCoverage: true,
-  coverageDirectory: "coverage",
-  coverageReporters: ["text", "lcov"],
+  collectCoverage: false,
   coveragePathIgnorePatterns: ["/node_modules/"],
 };
