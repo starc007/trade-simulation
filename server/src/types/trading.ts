@@ -24,6 +24,7 @@ export interface Order {
 }
 
 export interface Trade {
+  side: OrderSide;
   trade_id: string;
   timestamp: number;
   pair: string;

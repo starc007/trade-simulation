@@ -5,6 +5,7 @@ import { OrderBookManager } from "./orderBookManager";
 import { writeTrades } from "./fileService";
 import { writeOrderBook } from "./fileService";
 import { readOrders } from "./fileService";
+import { config } from "../config";
 
 export class MatchingEngine {
   private orderBook: OrderBookManager;
@@ -12,6 +13,12 @@ export class MatchingEngine {
 
   constructor() {
     this.orderBook = new OrderBookManager();
+    Decimal.set({ precision: config.matching.quantityPrecision });
+  }
+
+  private preserveDecimalFormat(value: Decimal, originalStr: string): string {
+    const decimalPlaces = (originalStr.split(".")[1] || "").length;
+    return value.toFixed(decimalPlaces);
   }
 
   // Process a single order
@@ -72,11 +79,12 @@ export class MatchingEngine {
         timestamp: Date.now(),
         pair,
         price: topOrder.limit_price,
-        amount: tradeAmount.toFixed(1),
+        amount: this.preserveDecimalFormat(tradeAmount, amount),
         maker_order_id: topOrder.order_id,
         taker_order_id: order_id,
         maker_account_id: topOrder.account_id,
         taker_account_id: account_id,
+        side: side,
       };
 
       newTrades.push(trade);
@@ -90,7 +98,10 @@ export class MatchingEngine {
       if (newTopOrderAmount.isZero()) {
         opposingOrders.shift(); // Remove fully filled order
       } else {
-        topOrder.amount = newTopOrderAmount.toFixed(1);
+        topOrder.amount = this.preserveDecimalFormat(
+          newTopOrderAmount,
+          topOrder.amount
+        );
       }
     }
 
@@ -98,7 +109,7 @@ export class MatchingEngine {
     if (remainingAmount.gt(0)) {
       const remainingOrder: Order = {
         ...incomingOrder,
-        amount: remainingAmount.toFixed(1),
+        amount: this.preserveDecimalFormat(remainingAmount, amount),
       };
       this.orderBook.addOrder(remainingOrder);
     }

@@ -17,9 +17,10 @@ describe("OrderController", () => {
   let mockNext: jest.Mock;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     mockRequest = {
       body: {
-        order_id: "123",
         account_id: "456",
         amount: "1.0",
         pair: "BTC/USDC",
@@ -39,6 +40,8 @@ describe("OrderController", () => {
       const mockTrades: Trade[] = [];
       (matchingEngine.processOrder as jest.Mock).mockReturnValue(mockTrades);
 
+      const { order_id, ...requestBody } = mockRequest.body;
+
       await createOrder(
         mockRequest as Request,
         mockResponse as Response,
@@ -47,7 +50,8 @@ describe("OrderController", () => {
 
       expect(matchingEngine.processOrder).toHaveBeenCalledWith({
         type_op: "CREATE",
-        ...mockRequest.body,
+        order_id: expect.any(String),
+        ...requestBody,
       });
       expect(mockResponse.status).toHaveBeenCalledWith(201);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -79,7 +83,6 @@ describe("OrderController", () => {
       const mockTrades: Trade[] = [];
       (matchingEngine.processOrder as jest.Mock).mockReturnValue(mockTrades);
 
-      // Update mock request for delete operation
       mockRequest.body = {
         order_id: "123",
         account_id: "456",
@@ -93,6 +96,7 @@ describe("OrderController", () => {
         mockNext
       );
 
+      expect(matchingEngine.processOrder).toHaveBeenCalledTimes(1);
       expect(matchingEngine.processOrder).toHaveBeenCalledWith({
         type_op: "DELETE",
         order_id: "123",

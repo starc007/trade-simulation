@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { Order, OrderOperation, OrderSide } from "../types/trading";
+import { v4 as uuidv4 } from "uuid";
+import { Order, OrderSide } from "../types/trading";
 import { matchingEngine } from "../services/matchingEngine";
 import { AppError } from "../middleware/errorHandler";
 import { logger } from "../utils/logger";
@@ -38,10 +39,10 @@ export const createOrder = async (
   next: NextFunction
 ) => {
   try {
-    const { order_id, account_id, amount, pair, limit_price, side } = req.body;
+    const { account_id, amount, pair, limit_price, side } = req.body;
 
     // Validate required fields
-    if (!order_id || !account_id || !amount || !pair || !limit_price || !side) {
+    if (!account_id || !amount || !pair || !limit_price || !side) {
       throw new AppError(400, "Missing required fields for order creation");
     }
 
@@ -49,6 +50,8 @@ export const createOrder = async (
     if (!["BUY", "SELL"].includes(side)) {
       throw new AppError(400, "Invalid order side. Must be 'BUY' or 'SELL'");
     }
+
+    const order_id = uuidv4();
 
     const order: Order = {
       type_op: "CREATE",
@@ -59,6 +62,8 @@ export const createOrder = async (
       limit_price,
       side: side as OrderSide,
     };
+
+    console.log("order:", order);
 
     const trades = matchingEngine.processOrder(order);
 
