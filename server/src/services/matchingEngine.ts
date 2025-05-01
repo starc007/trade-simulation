@@ -1,249 +1,116 @@
 import { v4 as uuidv4 } from "uuid";
 import Decimal from "decimal.js";
-import {
-  Order,
-  OrderBook,
-  OrderSide,
-  OrderStatus,
-  OrderType,
-  Trade,
-} from "../types/trading";
-import { logger } from "../utils/logger";
+import { Order, OrderSide, Trade } from "../types/trading";
+import { OrderBookManager } from "./orderBookManager";
 
 export class MatchingEngine {
-  private orderBook: OrderBook = {
-    bids: [],
-    asks: [],
-  };
+  private orderBook: OrderBookManager;
   private trades: Trade[] = [];
 
   constructor() {
-    this.orderBook = {
-      bids: [],
-      asks: [],
-    };
-    this.trades = [];
+    this.orderBook = new OrderBookManager();
   }
 
-  public placeOrder(
-    order: Omit<
-      Order,
-      "id" | "status" | "filledQuantity" | "createdAt" | "updatedAt"
-    >
-  ): {
-    order: Order;
-    trades: Trade[];
-  } {
-    const newOrder: Order = {
-      ...order,
-      id: uuidv4(),
-      status: OrderStatus.OPEN,
-      filledQuantity: new Decimal(0),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const trades: Trade[] = [];
-
-    if (order.type === OrderType.MARKET) {
-      this.matchMarketOrder(newOrder, trades);
-    } else {
-      this.matchLimitOrder(newOrder, trades);
+  // Process a single order
+  processOrder(order: Order): Trade[] {
+    if (order.type_op === "CREATE") {
+      return this.matchOrder(order);
+    } else if (order.type_op === "DELETE") {
+      this.orderBook.removeOrder(order);
     }
-
-    return { order: newOrder, trades };
+    return [];
   }
 
-  private matchLimitOrder(order: Order, trades: Trade[]): void {
-    const oppositeSide =
-      order.side === OrderSide.BUY ? this.orderBook.asks : this.orderBook.bids;
-    const sameSide =
-      order.side === OrderSide.BUY ? this.orderBook.bids : this.orderBook.asks;
-
-    // Try to match with existing orders
-    while (order.status !== OrderStatus.FILLED && oppositeSide.length > 0) {
-      const oppositeOrder = oppositeSide[0].orders[0];
-
-      if (
-        (order.side === OrderSide.BUY && order.price.lt(oppositeOrder.price)) ||
-        (order.side === OrderSide.SELL && order.price.gt(oppositeOrder.price))
-      ) {
-        break;
-      }
-
-      const matchQuantity = Decimal.min(
-        order.quantity.minus(order.filledQuantity),
-        oppositeOrder.quantity.minus(oppositeOrder.filledQuantity)
-      );
-
-      if (matchQuantity.gt(0)) {
-        const trade: Trade = {
-          id: uuidv4(),
-          buyOrderId:
-            order.side === OrderSide.BUY ? order.id : oppositeOrder.id,
-          sellOrderId:
-            order.side === OrderSide.SELL ? order.id : oppositeOrder.id,
-          price: oppositeOrder.price,
-          quantity: matchQuantity,
-          timestamp: new Date(),
-        };
-
-        trades.push(trade);
-        this.trades.push(trade);
-
-        // Update order quantities
-        order.filledQuantity = order.filledQuantity.plus(matchQuantity);
-        oppositeOrder.filledQuantity =
-          oppositeOrder.filledQuantity.plus(matchQuantity);
-
-        // Update order statuses
-        if (order.filledQuantity.eq(order.quantity)) {
-          order.status = OrderStatus.FILLED;
-        } else {
-          order.status = OrderStatus.PARTIALLY_FILLED;
-        }
-
-        if (oppositeOrder.filledQuantity.eq(oppositeOrder.quantity)) {
-          oppositeOrder.status = OrderStatus.FILLED;
-          oppositeSide[0].orders.shift();
-          if (oppositeSide[0].orders.length === 0) {
-            oppositeSide.shift();
-          }
-        }
-      }
-    }
-
-    // If order is not fully filled, add to order book
-    if (order.status !== OrderStatus.FILLED) {
-      this.addToOrderBook(order, sameSide);
+  // Process multiple orders
+  processOrders(orders: Order[]): void {
+    for (const order of orders) {
+      this.processOrder(order);
     }
   }
 
-  private matchMarketOrder(order: Order, trades: Trade[]): void {
-    const oppositeSide =
-      order.side === OrderSide.BUY ? this.orderBook.asks : this.orderBook.bids;
+  // Match incoming order against the orderbook
+  private matchOrder(incomingOrder: Order): Trade[] {
+    const { pair, side, limit_price, amount, order_id, account_id } =
+      incomingOrder;
+    const newTrades: Trade[] = [];
 
-    while (order.status !== OrderStatus.FILLED && oppositeSide.length > 0) {
-      const oppositeOrder = oppositeSide[0].orders[0];
-      const matchQuantity = Decimal.min(
-        order.quantity.minus(order.filledQuantity),
-        oppositeOrder.quantity.minus(oppositeOrder.filledQuantity)
-      );
+    // Determine which side of the book to match against
+    const opposingSide: OrderSide = side === "BUY" ? "SELL" : "BUY";
+    const opposingSideKey = opposingSide.toLowerCase() as Lowercase<OrderSide>;
 
-      if (matchQuantity.gt(0)) {
-        const trade: Trade = {
-          id: uuidv4(),
-          buyOrderId:
-            order.side === OrderSide.BUY ? order.id : oppositeOrder.id,
-          sellOrderId:
-            order.side === OrderSide.SELL ? order.id : oppositeOrder.id,
-          price: oppositeOrder.price,
-          quantity: matchQuantity,
-          timestamp: new Date(),
-        };
+    // Initialize orderbook for this pair if needed
+    this.orderBook.initializeOrderBook(pair);
 
-        trades.push(trade);
-        this.trades.push(trade);
+    let remainingAmount = new Decimal(amount);
+    let opposingOrders = this.orderBook.getOrderBook()[pair][opposingSideKey];
 
-        // Update order quantities
-        order.filledQuantity = order.filledQuantity.plus(matchQuantity);
-        oppositeOrder.filledQuantity =
-          oppositeOrder.filledQuantity.plus(matchQuantity);
+    // Continue matching while there's remaining amount and opposing orders
+    while (remainingAmount.gt(0) && opposingOrders.length > 0) {
+      const topOrder = opposingOrders[0];
 
-        // Update order statuses
-        if (order.filledQuantity.eq(order.quantity)) {
-          order.status = OrderStatus.FILLED;
-        } else {
-          order.status = OrderStatus.PARTIALLY_FILLED;
-        }
+      // Check if prices cross (can match)
+      const incomingPrice = new Decimal(limit_price);
+      const topOrderPrice = new Decimal(topOrder.limit_price);
 
-        if (oppositeOrder.filledQuantity.eq(oppositeOrder.quantity)) {
-          oppositeOrder.status = OrderStatus.FILLED;
-          oppositeSide[0].orders.shift();
-          if (oppositeSide[0].orders.length === 0) {
-            oppositeSide.shift();
-          }
-        }
-      }
-    }
+      const canMatch =
+        side === "BUY"
+          ? incomingPrice.gte(topOrderPrice)
+          : incomingPrice.lte(topOrderPrice);
 
-    if (order.status === OrderStatus.OPEN) {
-      order.status = OrderStatus.PARTIALLY_FILLED;
-    }
-  }
+      if (!canMatch) break;
 
-  private addToOrderBook(
-    order: Order,
-    side: { price: Decimal; totalQuantity: Decimal; orders: Order[] }[]
-  ): void {
-    const priceIndex = side.findIndex((level) => level.price.eq(order.price));
+      // Calculate trade amount (minimum of the two orders)
+      const topOrderAmount = new Decimal(topOrder.amount);
+      const tradeAmount = Decimal.min(remainingAmount, topOrderAmount);
 
-    if (priceIndex === -1) {
-      // Insert new price level
-      const newLevel = {
-        price: order.price,
-        totalQuantity: order.quantity,
-        orders: [order],
+      // Create trade record
+      const trade: Trade = {
+        trade_id: uuidv4(),
+        timestamp: Date.now(),
+        pair,
+        price: topOrder.limit_price, // Maker sets the price
+        amount: tradeAmount.toString(),
+        maker_order_id: topOrder.order_id,
+        taker_order_id: order_id,
+        maker_account_id: topOrder.account_id,
+        taker_account_id: account_id,
       };
 
-      const insertIndex = side.findIndex((level) =>
-        order.side === OrderSide.BUY
-          ? level.price.lt(order.price)
-          : level.price.gt(order.price)
-      );
+      newTrades.push(trade);
+      this.trades.push(trade);
 
-      if (insertIndex === -1) {
-        side.push(newLevel);
+      // Update remaining amounts
+      remainingAmount = remainingAmount.minus(tradeAmount);
+      const newTopOrderAmount = topOrderAmount.minus(tradeAmount);
+
+      // Update or remove the top order
+      if (newTopOrderAmount.isZero()) {
+        opposingOrders.shift(); // Remove fully filled order
       } else {
-        side.splice(insertIndex, 0, newLevel);
+        topOrder.amount = newTopOrderAmount.toString();
       }
-    } else {
-      // Add to existing price level
-      side[priceIndex].orders.push(order);
-      side[priceIndex].totalQuantity = side[priceIndex].totalQuantity.plus(
-        order.quantity
-      );
     }
+
+    // If there's remaining amount, add to orderbook
+    if (remainingAmount.gt(0)) {
+      const remainingOrder: Order = {
+        ...incomingOrder,
+        amount: remainingAmount.toString(),
+      };
+      this.orderBook.addOrder(remainingOrder);
+    }
+
+    return newTrades;
   }
 
-  public getOrderBook(): OrderBook {
-    return this.orderBook;
+  // Get current orderbook
+  getOrderBook() {
+    return this.orderBook.getOrderBook();
   }
 
-  public getTrades(): Trade[] {
+  // Get all trades
+  getTrades() {
     return this.trades;
-  }
-
-  public cancelOrder(orderId: string): boolean {
-    const sides = [this.orderBook.bids, this.orderBook.asks];
-
-    for (const side of sides) {
-      for (const level of side) {
-        const orderIndex = level.orders.findIndex(
-          (order) => order.id === orderId
-        );
-        if (orderIndex !== -1) {
-          const order = level.orders[orderIndex];
-          if (order.status === OrderStatus.FILLED) {
-            return false;
-          }
-
-          level.orders.splice(orderIndex, 1);
-          level.totalQuantity = level.totalQuantity.minus(
-            order.quantity.minus(order.filledQuantity)
-          );
-
-          if (level.orders.length === 0) {
-            const levelIndex = side.findIndex((l) => l.price.eq(level.price));
-            side.splice(levelIndex, 1);
-          }
-
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 }
 

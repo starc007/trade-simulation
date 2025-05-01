@@ -1,10 +1,8 @@
 import { z } from "zod";
 import Decimal from "decimal.js";
 
-export enum OrderSide {
-  BUY = "BUY",
-  SELL = "SELL",
-}
+export type OrderSide = "BUY" | "SELL";
+export type OrderOperation = "CREATE" | "DELETE";
 
 export enum OrderType {
   LIMIT = "LIMIT",
@@ -19,41 +17,44 @@ export enum OrderStatus {
 }
 
 export interface Order {
-  id: string;
+  type_op: OrderOperation;
+  account_id: string;
+  amount: string;
+  order_id: string;
+  pair: string;
+  limit_price: string;
   side: OrderSide;
-  type: OrderType;
-  price: Decimal;
-  quantity: Decimal;
-  status: OrderStatus;
-  filledQuantity: Decimal;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface Trade {
-  id: string;
-  buyOrderId: string;
-  sellOrderId: string;
-  price: Decimal;
-  quantity: Decimal;
-  timestamp: Date;
+  trade_id: string;
+  timestamp: number;
+  pair: string;
+  price: string;
+  amount: string;
+  maker_order_id: string;
+  taker_order_id: string;
+  maker_account_id: string;
+  taker_account_id: string;
 }
 
 export interface OrderBookLevel {
-  price: Decimal;
-  totalQuantity: Decimal;
+  price: string;
+  total_amount: string;
   orders: Order[];
 }
 
 export interface OrderBook {
-  bids: OrderBookLevel[];
-  asks: OrderBookLevel[];
+  [pair: string]: {
+    buy: Order[];
+    sell: Order[];
+  };
 }
 
 // Zod schemas for validation
 export const orderSchema = z.object({
-  side: z.nativeEnum(OrderSide),
-  type: z.nativeEnum(OrderType),
+  side: z.enum(["BUY", "SELL"]),
+  type: z.enum(["LIMIT", "MARKET"]),
   price: z.string().transform((val) => new Decimal(val)),
   quantity: z.string().transform((val) => new Decimal(val)),
 });

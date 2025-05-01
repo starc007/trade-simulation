@@ -1,28 +1,45 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import { readOrderBook, writeOrderBook } from "../services/fileService";
 import { matchingEngine } from "../services/matchingEngine";
 import { logger } from "../utils/logger";
 
-/**
- * Retrieves the current state of the orderbook
- */
-export const getOrderBook = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const orderBook = matchingEngine.getOrderBook();
+export const orderbookController = {
+  // Get the current orderbook
+  async getOrderBook(req: Request, res: Response) {
+    try {
+      const orderbook = matchingEngine.getOrderBook();
+      res.json({
+        success: true,
+        orderbook,
+      });
+    } catch (error) {
+      logger.error("Error getting orderbook:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error getting orderbook",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
 
-    logger.info("Orderbook retrieved", {
-      bids: orderBook.bids.length,
-      asks: orderBook.asks.length,
-    });
+  // Reset the orderbook to empty state
+  async resetOrderBook(req: Request, res: Response) {
+    try {
+      const emptyOrderbook = {};
+      await writeOrderBook(emptyOrderbook);
 
-    res.status(200).json({
-      status: "success",
-      data: orderBook,
-    });
-  } catch (error) {
-    next(error);
-  }
+      res.json({
+        success: true,
+        message: "Orderbook reset successfully",
+        orderbook: emptyOrderbook,
+      });
+    } catch (error) {
+      logger.error("Error resetting orderbook:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error resetting orderbook",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
 };
