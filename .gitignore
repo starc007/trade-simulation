@@ -60,3 +60,5 @@ logs
 .tmp/
 .temp/ 
 
+server/data/trades.json
+server/data/orderBook.json

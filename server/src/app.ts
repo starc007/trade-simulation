@@ -10,6 +10,7 @@ import { orderbookRoutes } from "./routes/orderbookRoutes";
 import { tradeRoutes } from "./routes/tradeRoutes";
 import { logger } from "./utils/logger";
 import { matchingEngine } from "./services/matchingEngine";
+import priceRoutes from "./routes/priceRoutes";
 
 const app = express();
 const PORT = config.port;
@@ -30,6 +31,7 @@ const initRoutes = () => {
   app.use("/api/orders", orderRoutes);
   app.use("/api/orderbook", orderbookRoutes);
   app.use("/api/trades", tradeRoutes);
+  app.use("/api/prices", priceRoutes);
 };
 
 const initTradingEngine = async () => {

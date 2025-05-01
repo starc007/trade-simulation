@@ -39,4 +39,14 @@ export const tradingApi = {
   cancelOrder: async (orderId: string): Promise<void> => {
     await api.delete(`/api/orders/${orderId}`);
   },
+
+  getHistoricalPrices: async (timeframe: string = "24H") => {
+    const response = await fetch(
+      `/api/prices/historical?timeframe=${timeframe}`
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch historical prices");
+    }
+    return response.json();
+  },
 };

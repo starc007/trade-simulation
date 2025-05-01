@@ -6,6 +6,7 @@ import { TradeHistory } from "./components/trading/TradeHistory";
 import { OrderForm } from "./components/trading/OrderForm";
 import { Loader } from "./components/ui/Loader";
 import { motion } from "framer-motion";
+import { PriceChart } from "./components/trading/PriceChart";
 
 export default function Home() {
   const { orderBook, trades, error, loading } = useTradingData();
@@ -36,6 +37,10 @@ export default function Home() {
         className="max-w-7xl mx-auto"
       >
         <h1 className="text-3xl font-bold text-primary mb-8">Dashboard</h1>
+
+        <div className="flex mb-8">
+          <PriceChart trades={trades} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
