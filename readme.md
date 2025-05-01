@@ -63,11 +63,9 @@ trading-engine/
 
 ### Server
 
-- `npm start` - Start the server
 - `npm run dev` - Start the server in development mode with hot reload
 - `npm test` - Run tests
 
 ### Client
 
-- `npm start` - Start the client application
-- `npm run build` - Build the client for production
+- `npm run dev` - Start the client application
