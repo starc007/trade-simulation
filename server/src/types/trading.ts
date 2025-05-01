@@ -1,6 +1,3 @@
-import { z } from "zod";
-import Decimal from "decimal.js";
-
 export type OrderSide = "BUY" | "SELL";
 export type OrderOperation = "CREATE" | "DELETE";
 
@@ -50,13 +47,3 @@ export interface OrderBook {
     sell: Order[];
   };
 }
-
-// Zod schemas for validation
-export const orderSchema = z.object({
-  side: z.enum(["BUY", "SELL"]),
-  type: z.enum(["LIMIT", "MARKET"]),
-  price: z.string().transform((val) => new Decimal(val)),
-  quantity: z.string().transform((val) => new Decimal(val)),
-});
-
-export type CreateOrderRequest = z.infer<typeof orderSchema>;

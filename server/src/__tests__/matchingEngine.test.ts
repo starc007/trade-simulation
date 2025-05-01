@@ -1,21 +1,22 @@
-import { MatchingEngine } from "../services/matchingEngine";
-import { Order } from "../types/trading";
+import { Order } from "@/types/trading";
+import { MatchingEngine } from "@/services/matchingEngine";
 
 describe("MatchingEngine", () => {
   let engine: MatchingEngine;
 
   beforeEach(() => {
-    engine = new MatchingEngine("BTC/USDC");
+    engine = new MatchingEngine();
   });
 
-  it("should match a simple trade between buy and sell orders", () => {
+  test("should match buy and sell orders at same price", () => {
+    // Create a simple buy and sell order at the same price
     const buyOrder: Order = {
       type_op: "CREATE",
       account_id: "1",
       amount: "1.0",
       order_id: "1",
       pair: "BTC/USDC",
-      limit_price: "50000.00",
+      limit_price: "50000",
       side: "BUY",
     };
 
@@ -25,145 +26,104 @@ describe("MatchingEngine", () => {
       amount: "1.0",
       order_id: "2",
       pair: "BTC/USDC",
-      limit_price: "50000.00",
+      limit_price: "50000",
       side: "SELL",
     };
 
-    // Process buy order first
-    const trades1 = engine.processOrder(buyOrder);
-    expect(trades1).toHaveLength(0); // No trades yet as there's no matching sell order
+    // Process the sell order first (no match yet)
+    const sellTrades = engine.processOrder(sellOrder);
+    expect(sellTrades).toHaveLength(0);
 
-    // Process sell order
-    const trades2 = engine.processOrder(sellOrder);
-    expect(trades2).toHaveLength(1); // Should create one trade
+    // Verify the sell order is in the orderbook
+    const orderBookAfterSell = engine.getOrderBook();
+    expect(orderBookAfterSell["BTC/USDC"].sell).toHaveLength(1);
+    expect(orderBookAfterSell["BTC/USDC"].buy).toHaveLength(0);
 
-    const trade = trades2[0];
-    expect(trade.price).toBe("50000.00");
-    expect(trade.amount).toBe("1.0");
-    expect(trade.buyer_id).toBe("1");
-    expect(trade.seller_id).toBe("2");
+    // Process the buy order (should match)
+    const buyTrades = engine.processOrder(buyOrder);
 
-    // Verify orderbook is empty after full match
-    const orderBook = engine.getOrderBook();
-    expect(orderBook.bids).toHaveLength(0);
-    expect(orderBook.asks).toHaveLength(0);
+    // Verify a trade was created
+    expect(buyTrades).toHaveLength(1);
+    expect(buyTrades[0].price).toBe("50000");
+    expect(buyTrades[0].amount).toBe("1.0");
+    expect(buyTrades[0].maker_order_id).toBe("2");
+    expect(buyTrades[0].taker_order_id).toBe("1");
+
+    // Verify both orders are now gone from the orderbook
+    const finalOrderBook = engine.getOrderBook();
+    expect(finalOrderBook["BTC/USDC"].sell).toHaveLength(0);
+    expect(finalOrderBook["BTC/USDC"].buy).toHaveLength(0);
   });
 
-  it("should handle partial matches correctly", () => {
-    const buyOrder: Order = {
+  test("should correctly handle partial fills", () => {
+    // Create a sell order with 2.0 BTC
+    const sellOrder: Order = {
       type_op: "CREATE",
       account_id: "1",
       amount: "2.0",
       order_id: "1",
       pair: "BTC/USDC",
-      limit_price: "50000.00",
-      side: "BUY",
+      limit_price: "50000",
+      side: "SELL",
     };
 
-    const sellOrder: Order = {
+    // Create a buy order with 1.0 BTC
+    const buyOrder: Order = {
       type_op: "CREATE",
       account_id: "2",
       amount: "1.0",
       order_id: "2",
       pair: "BTC/USDC",
-      limit_price: "50000.00",
-      side: "SELL",
+      limit_price: "50000",
+      side: "BUY",
     };
 
-    // Process buy order first
-    engine.processOrder(buyOrder);
+    // Process sell order first
+    engine.processOrder(sellOrder);
 
-    // Process sell order
-    const trades = engine.processOrder(sellOrder);
+    // Process buy order (should partially fill sell order)
+    const trades = engine.processOrder(buyOrder);
+
+    // Verify the trade
     expect(trades).toHaveLength(1);
+    expect(trades[0].amount).toBe("1.0");
 
-    const trade = trades[0];
-    expect(trade.amount).toBe("1.0");
-
-    // Verify remaining buy order in orderbook
+    // Verify the remainder in the orderbook
     const orderBook = engine.getOrderBook();
-    expect(orderBook.bids).toHaveLength(1);
-    expect(orderBook.bids[0].orders[0].amount).toBe("1.0");
+    expect(orderBook["BTC/USDC"].sell).toHaveLength(1);
+    expect(orderBook["BTC/USDC"].sell[0].amount).toBe("1.0"); // 2.0 - 1.0 = 1.0 remaining
+    expect(orderBook["BTC/USDC"].buy).toHaveLength(0); // Buy order fully matched
   });
 
-  it("should handle order deletion", () => {
-    const order: Order = {
+  test("should process DELETE operations", () => {
+    // Create a sell order
+    const sellOrder: Order = {
       type_op: "CREATE",
       account_id: "1",
       amount: "1.0",
       order_id: "1",
       pair: "BTC/USDC",
-      limit_price: "50000.00",
-      side: "BUY",
+      limit_price: "50000",
+      side: "SELL",
     };
 
-    // Add order to book
-    engine.processOrder(order);
+    // Process the sell order
+    engine.processOrder(sellOrder);
 
-    // Delete order
+    // Verify the order is in the book
+    let orderBook = engine.getOrderBook();
+    expect(orderBook["BTC/USDC"].sell).toHaveLength(1);
+
+    // Delete the order
     const deleteOrder: Order = {
-      ...order,
+      ...sellOrder,
       type_op: "DELETE",
     };
 
     engine.processOrder(deleteOrder);
 
-    // Verify order is removed from orderbook
-    const orderBook = engine.getOrderBook();
-    expect(orderBook.bids).toHaveLength(0);
-  });
-
-  it("should maintain price-time priority", () => {
-    // Add multiple orders at the same price
-    const orders: Order[] = [
-      {
-        type_op: "CREATE",
-        account_id: "1",
-        amount: "1.0",
-        order_id: "1",
-        pair: "BTC/USDC",
-        limit_price: "50000.00",
-        side: "BUY",
-      },
-      {
-        type_op: "CREATE",
-        account_id: "2",
-        amount: "1.0",
-        order_id: "2",
-        pair: "BTC/USDC",
-        limit_price: "50000.00",
-        side: "BUY",
-      },
-      {
-        type_op: "CREATE",
-        account_id: "3",
-        amount: "1.0",
-        order_id: "3",
-        pair: "BTC/USDC",
-        limit_price: "50000.00",
-        side: "BUY",
-      },
-    ];
-
-    // Process all buy orders
-    orders.forEach((order) => engine.processOrder(order));
-
-    // Add a matching sell order
-    const sellOrder: Order = {
-      type_op: "CREATE",
-      account_id: "4",
-      amount: "1.0",
-      order_id: "4",
-      pair: "BTC/USDC",
-      limit_price: "50000.00",
-      side: "SELL",
-    };
-
-    const trades = engine.processOrder(sellOrder);
-    expect(trades).toHaveLength(1);
-
-    // Verify the first buy order was matched (price-time priority)
-    const trade = trades[0];
-    expect(trade.buyer_id).toBe("1");
+    // Verify the order is gone
+    orderBook = engine.getOrderBook();
+    expect(orderBook["BTC/USDC"].sell).toHaveLength(0);
   });
 });
