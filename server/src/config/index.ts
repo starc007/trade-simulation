@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const config = {
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 6969,
   nodeEnv: process.env.NODE_ENV || "development",
   logLevel: process.env.LOG_LEVEL || "info",
   orderbook: {
