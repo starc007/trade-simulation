@@ -35,7 +35,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-7xl mx-auto"
       >
-        <h1 className="text-3xl font-bold text-primary mb-8">Trading Engine</h1>
+        <h1 className="text-3xl font-bold text-primary mb-8">Dashboard</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-8">
