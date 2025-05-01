@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { Trade } from "../../types/trading";
+import { Button } from "../ui/Button";
 
 interface PriceChartProps {
   trades: Trade[];
