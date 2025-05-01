@@ -64,8 +64,6 @@ export const OrderForm = ({ onOrderCreated }: OrderFormProps) => {
         amount: formData.amount,
       };
 
-      console.log("Submitting order:", orderData); // Debug log
-
       await tradingApi.createOrder(orderData);
       setFormData({ ...formData, price: "", amount: "" });
       onOrderCreated();
@@ -118,7 +116,6 @@ export const OrderForm = ({ onOrderCreated }: OrderFormProps) => {
               }
               className="w-full rounded-xl border border-border/50 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary duration-200"
             >
-              <option value="SOL/USDC">SOL/USDC</option>
               <option value="BTC/USDC">BTC/USDC</option>
             </select>
             <p className="text-xs text-secondary mt-1">

@@ -16,7 +16,7 @@ export const getTrades = async (
     const trades = matchingEngine.getTrades();
     res.json({
       success: true,
-      trades,
+      trades: trades,
     });
   } catch (error) {
     next(new AppError(500, "Failed to fetch trades"));

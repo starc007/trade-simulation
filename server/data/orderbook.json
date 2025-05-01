@@ -1,0 +1,70 @@
+{
+  "BTC/USDC": {
+    "buy": [
+      {
+        "type_op": "CREATE",
+        "order_id": "8c7fc614-6c3b-4c19-b274-5825eefd217f",
+        "account_id": "1",
+        "amount": "5944",
+        "pair": "BTC/USDC",
+        "limit_price": "100000",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "4.50000",
+        "order_id": "13",
+        "pair": "BTC/USDC",
+        "limit_price": "62877.30",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "3.50000",
+        "order_id": "14",
+        "pair": "BTC/USDC",
+        "limit_price": "62877.30",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "2.00000",
+        "order_id": "12",
+        "pair": "BTC/USDC",
+        "limit_price": "61577.30",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "1.57600",
+        "order_id": "15",
+        "pair": "BTC/USDC",
+        "limit_price": "60577.30",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "0.47600",
+        "order_id": "18",
+        "pair": "BTC/USDC",
+        "limit_price": "60577.30",
+        "side": "BUY"
+      },
+      {
+        "type_op": "CREATE",
+        "account_id": "2",
+        "amount": "1.00000",
+        "order_id": "19",
+        "pair": "BTC/USDC",
+        "limit_price": "60577.30",
+        "side": "BUY"
+      }
+    ],
+    "sell": []
+  }
+}

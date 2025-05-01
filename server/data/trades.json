@@ -1,0 +1,14 @@
+[
+  {
+    "trade_id": "3382e94c-c3f6-4173-b355-b5d44695e7ae",
+    "timestamp": 1746108613897,
+    "pair": "BTC/USDC",
+    "price": "100000",
+    "amount": "10",
+    "maker_order_id": "8c7fc614-6c3b-4c19-b274-5825eefd217f",
+    "taker_order_id": "df431402-1b3f-4536-85ca-835c75b8d13a",
+    "maker_account_id": "1",
+    "taker_account_id": "1",
+    "side": "SELL"
+  }
+]
