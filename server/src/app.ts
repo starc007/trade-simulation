@@ -8,28 +8,50 @@ import { requestLogger } from "./middleware/requestLogger";
 import { orderRoutes } from "./routes/orderRoutes";
 import { orderbookRoutes } from "./routes/orderbookRoutes";
 import { tradeRoutes } from "./routes/tradeRoutes";
+import { logger } from "./utils/logger";
+import { matchingEngine } from "./services/matchingEngine";
 
 const app = express();
-
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-app.use(morgan("dev"));
-app.use(requestLogger);
-
-// Routes
-app.use("/api/orders", orderRoutes);
-app.use("/api/orderbook", orderbookRoutes);
-app.use("/api/trades", tradeRoutes);
-
-// Error handling
-app.use(errorHandler);
-
 const PORT = config.port;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const initMiddleware = () => {
+  // Middleware
+  app.use(helmet());
+  app.use(cors());
+  app.use(express.json());
+  app.use(morgan("dev"));
+  app.use(requestLogger);
+
+  // Error handling
+  app.use(errorHandler);
+};
+
+const initRoutes = () => {
+  app.use("/api/orders", orderRoutes);
+  app.use("/api/orderbook", orderbookRoutes);
+  app.use("/api/trades", tradeRoutes);
+};
+
+const initTradingEngine = async () => {
+  try {
+    await matchingEngine.processInitialOrders();
+    logger.info("Trading engine initialized successfully");
+  } catch (error) {
+    logger.error("Failed to initialize trading engine:", error);
+    process.exit(1);
+  }
+};
+
+const initApp = () => {
+  initMiddleware();
+  initRoutes();
+  initTradingEngine();
+  // Start the server
+  app.listen(PORT, () => {
+    logger.info(`Server is running on port ${PORT}`);
+  });
+};
+
+initApp();
 
 export default app;

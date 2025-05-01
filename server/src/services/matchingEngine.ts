@@ -2,6 +2,9 @@ import { v4 as uuidv4 } from "uuid";
 import Decimal from "decimal.js";
 import { Order, OrderSide, Trade } from "../types/trading";
 import { OrderBookManager } from "./orderBookManager";
+import { writeTrades } from "./fileService";
+import { writeOrderBook } from "./fileService";
+import { readOrders } from "./fileService";
 
 export class MatchingEngine {
   private orderBook: OrderBookManager;
@@ -101,6 +104,21 @@ export class MatchingEngine {
     }
 
     return newTrades;
+  }
+
+  async processInitialOrders() {
+    const orders = await readOrders();
+    const trades: any[] = [];
+
+    // Process each order
+    for (const order of orders) {
+      const orderTrades = this.processOrder(order);
+      trades.push(...orderTrades);
+    }
+
+    // Write updated orderbook and trades to files
+    await writeOrderBook(this.getOrderBook());
+    await writeTrades(trades);
   }
 
   // Get current orderbook

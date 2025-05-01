@@ -10,39 +10,6 @@ import {
 } from "../services/fileService";
 
 /**
- * Process all orders from the data file
- */
-export const processOrders = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const orders = await readOrders();
-    const trades: any[] = [];
-
-    // Process each order
-    for (const order of orders) {
-      const orderTrades = matchingEngine.processOrder(order);
-      trades.push(...orderTrades);
-    }
-
-    // Write updated orderbook and trades to files
-    await writeOrderBook(matchingEngine.getOrderBook());
-    await writeTrades(trades);
-
-    res.json({
-      success: true,
-      message: `Processed ${orders.length} orders`,
-      trades: trades.length,
-      orderbook: matchingEngine.getOrderBook(),
-    });
-  } catch (error) {
-    next(new AppError(500, "Failed to process orders"));
-  }
-};
-
-/**
  * Get all orders from the data file
  */
 export const getOrders = async (
