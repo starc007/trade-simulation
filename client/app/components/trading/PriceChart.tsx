@@ -10,7 +10,6 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { Trade } from "../../types/trading";
-import { Button } from "../ui/Button";
 
 interface PriceChartProps {
   trades: Trade[];
@@ -31,15 +30,15 @@ export const PriceChart = ({ trades, timeframe = "24H" }: PriceChartProps) => {
     }));
 
   return (
-    <div className="p-6 rounded-2xl w-full max-w-[1200px]">
-      <div className="flex items-baseline gap-3 mb-6">
+    <div className="rounded-2xl w-full mb-10 h-full">
+      <div className="flex flex-col gap-1 mb-6">
+        <span className="text-primary/50 text-sm font-medium">Price</span>
         <h2 className="text-4xl font-bold">
           ${chartData[chartData.length - 1]?.price.toFixed(2)}
         </h2>
-        <span className="text-emerald-400 text-lg">3.70%</span>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex md:flex-row flex-col md:gap-4 gap-10 w-full h-full">
         {/* Price Chart */}
         <div className="flex-1 h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
